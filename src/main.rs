@@ -6,6 +6,8 @@
 // HOMEWORK 15 refactor Subtraction
 //##################################################
 
+use std::f32::consts::E;
+
 #[derive(Clone)]
 #[derive(Debug)]
 pub enum Expression {
@@ -73,14 +75,81 @@ fn evaluate(element: &Expression, environment: &Environment) -> i32 {
     }
 }
 
+fn evaluate_evaluate(element: &Expression, environment: &Environment)  {
+    match element {
+        Expression::Add(_) => print_add(environment, element),
+        Expression::Multiply(_) => print_multiply(environment, element),
+        Expression::Subtract(_) => todo!(),
+        Expression::Variable(_) => todo!(),
+        Expression::Number(_) => (),
+    }
+}
+
+// Not perfect by any means but will continue to perfect it on my own time
+fn print_add(_environment: &Environment, element: &Expression) {
+    if let Expression::Add(_v) = element {
+        print!("(+ ");
+        for i in _v {
+            print!(" {:?}", i);    
+        }
+        print!(")");
+    } else {
+        panic!("Cant print that!");
+    }
+}
+
+fn print_multiply(_environment: &Environment, element: &Expression) {
+    if let Expression::Multiply(_v) = element {
+        print!("(* ");
+        for i in _v {
+            print!(" {:?}", i);    
+        }
+        print!(")");
+    } else {
+        panic!("Cant print that!");
+    }
+}
+
+fn print_divide(_environment: &Environment, element: &Expression) {
+    if let Expression::Add(_v) = element {
+        print!("(/ ");
+        for i in _v {
+            print!(" {:?}", i);    
+        }
+        print!(")");
+    } else {
+        panic!("Cant print that!");
+    }
+}
+
+fn print_substract(_environment: &Environment, element: &Expression) {
+    if let Expression::Add(_v) = element {
+        print!("(- ");
+        for i in _v {
+            print!(" {:?}", i);    
+        }
+        print!(")");
+    } else {
+        panic!("Cant print that!");
+    }
+}
+
 fn main() {
     let mut expression = Vec::<Expression>::new();
     // expression.push(Expression::Add);
     expression.push(Expression::Number(3));
     expression.push(Expression::Number(4));
     let addition = Expression::Add(expression);
+    let env = crate::Environment::new();
+    println!("{:?}", evaluate_evaluate(&addition, &env));
     let sum = evaluate(&addition, &Environment::new());
     println!("{}", sum);
+
+    let v = vec![Expression::Number(2), Expression::Number(3)];
+    let a = Expression::Add(v);
+    let z = Expression::Multiply(vec![a, Expression::Number(7)]);
+    // act
+    print!("{:?}", evaluate_evaluate( &z, &env));
 
     let mut expression2 = Vec::<Expression>::new();
     expression2.push(Expression::Number(21));
@@ -97,6 +166,7 @@ fn main() {
     let substraction = Expression::Subtract(expression3);
     let difference = evaluate(&substraction, &Environment::new());
     println!("{}", difference);
+
 }
 
 #[cfg(test)]
@@ -128,7 +198,6 @@ mod tests {
         assert_eq!(sum, 4);
     }
 
-    // HOMEWORK 13: We love subexpressions!
     #[test]
     fn test_multiplication() {
         use crate::evaluate_multiplication;
@@ -212,5 +281,20 @@ mod tests {
         let sum = crate::evaluate(&add, &new_env);
         //assert
         assert_eq!(sum, 53);
+    }
+    #[test]
+    fn test_printing_expression() {
+        use crate::print_add;
+        use crate::evaluate_evaluate;
+        use crate::Expression;
+        // arrange
+        let mut env = crate::Environment::new();
+        let v = vec![Expression::Number(2), Expression::Number(2)];
+        let a = Expression::Add(v);
+        let z = Expression::Multiply(vec![a, Expression::Number(2)]);
+        // act
+        let eq = evaluate_evaluate( &z, &env);
+        // assert
+        assert_eq!(eq, println!("(+ {:?})", eq));
     }
 }
