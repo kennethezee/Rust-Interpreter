@@ -19,13 +19,16 @@ pub enum Expression {
 
 pub struct Environment {
     map: HashMap<String, Expression>,
-    parent: Option<Box<Environment>>
+    parent: Option<Box<Environment>>,
+    // HW
+    cost: Option<HashMap<i32, i32>>,
+    difference: Option<i32>,
 }
 
 impl Environment {
 
     pub fn new() -> Environment {
-        Environment{map: HashMap::new(), parent: None}
+        Environment{map: HashMap::new(), parent: None, difference: None, cost: None}
     }
 
     pub fn value_for_key(self: &Environment, key: String) -> &Expression {
@@ -288,7 +291,7 @@ mod tests {
     #[test]
     fn hashy_mappy(){
         //arrange
-        let mut new_env = crate::Environment{map: HashMap::new()};
+        let mut new_env = crate::Environment{map: HashMap::new(), parent: None, cost: None, difference: None };
         new_env.map.insert(String::from("a"), Expression::Number(5));
         // let num = crate::Expression::Number(10);
         let v = vec![Expression::Variable(String::from("a")), Expression::Number(10)];
