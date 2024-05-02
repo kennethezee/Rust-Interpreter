@@ -18,23 +18,22 @@ pub enum Expression {
 }
 
 pub struct Environment {
-    // key: String,
-    // value: Expression,
-    map: HashMap<String, Expression>
+    map: HashMap<String, Expression>,
+    parent: Option<Box<Environment>>
 }
 
 impl Environment {
-    fn value_for_key(&self, key: &String) -> Option<&Expression> {
-        let keys = String::from(key);
-        let value = self.map.get(&keys).unwrap_or(&Expression::Number(0));
-        if &keys == key {
-            Some(value)
-        } else {
-            panic!("no key {key} found in environment");
-        }
+
+    pub fn new() -> Environment {
+        Environment{map: HashMap::new(), parent: None}
     }
-    fn new() -> Environment {
-        Environment{map: HashMap::new()}
+
+    pub fn value_for_key(self: &Environment, key: String) -> &Expression {
+       &self.map.get(&key).unwrap_or(&Expression::Number(0))
+    }
+
+    pub fn add_value_for_key(&mut self, key: String, value: &Expression) {
+        &self.map.insert(key, value.clone());
     }
 }
 
@@ -71,7 +70,7 @@ fn evaluate(element: &Expression, environment: &Environment) -> i32 {
         Expression::Add(_) => evalute_addition(&element, environment),
         Expression::Multiply(_) => evaluate_multiplication(&element, environment),
         Expression::Subtract(_) => evaluate_substraction(&element, environment),
-        Expression::Variable(v) => evaluate(environment.value_for_key(v).unwrap_or(element), environment),
+        Expression::Variable(v) => evaluate(environment.value_for_key(v.to_string()), environment),
         Expression::Number(n) => *n,
         _ => panic!("we havent done this yet")
     }
@@ -231,76 +230,61 @@ mod tests {
         assert_eq!(diff, 0);
     }
 
-    // #[test]
-    // fn test_new_environment() {
-    //     //arrange
-    //     let new_env = crate::Environment::new();
-    //     //act
-    //     let expr = new_env.value;
-    //     //assert
-    //     if let crate::Expression::Number(value) = expr {
-    //         assert_eq!(value, 0);
-    //     } else {
-    //         assert!(false);
-    //     }
-    // }
-    // #[test]
-    // fn test_value_for_key() {
-    //     //arrange
-    //     let mut new_env = crate::Environment::new();
-    //     new_env.key = String::from("foo");
-    //     new_env.value = crate::Expression::Number(42);
-    //     //act
-    //     let expr = new_env.value_for_key(&String::from("foo"));
-    //     //assert
-    //     if let crate::Expression::Number(value) = expr {
-    //         assert_eq!(42, *value);
-    //     } else {
-    //         assert!(false);
-    //     }
-    // }
-    // #[test]
-    // fn test_addition_with_variable() {
-    //     //arrange
-    //     let mut new_env = crate::Environment::new();
-    //     new_env.key = String::from("foo");
-    //     new_env.value = crate::Expression::Number(42);
-    //     let v = vec![Expression::Variable(String::from("foo")), Expression::Number(2)];
-    //     let add = Expression::Add(v);
-    //     //act
-    //     let sum = crate::evaluate(&add, &new_env);
-    //     //assert
-    //     assert_eq!(44, sum);
-    // }
-    // #[test]
-    // fn test_whiteboard_example() {
-    //     //arrange
-    //     let mut new_env = crate::Environment::new();
-    //     new_env.key = String::from("a");
-    //     new_env.value = crate::Expression::Number(10);
-    //     let v = vec![Expression::Variable(String::from("a")), Expression::Number(5)];
-    //     let mult = Expression::Multiply(v);
-    //     let add = Expression::Add(vec![mult, Expression::Number(3)]);
-    //     //act
-    //     let sum = crate::evaluate(&add, &new_env);
-    //     //assert
-    //     assert_eq!(sum, 53);
-    // }
-    // #[test]
-    // fn test_printing_expression() {
-    //     use crate::print_add;
-    //     use crate::evaluate_evaluate;
-    //     use crate::Expression;
-    //     // arrange
-    //     let mut env = crate::Environment::new();
-    //     let v = vec![Expression::Number(2), Expression::Number(2)];
-    //     let a = Expression::Add(v);
-    //     let z = Expression::Multiply(vec![a, Expression::Number(2)]);
-    //     // act
-    //     let eq = evaluate_evaluate( &z, &env);
-    //     // assert
-    //     assert_eq!(eq, println!("(+ {:?})", eq));
-    // }
+    #[test]
+    fn test_new_environment() {
+        //arrange
+        let mut new_env = crate::Environment::new();
+        new_env.add_value_for_key(String::from("foo"), &crate::Expression::Number(42));
+        //act
+        let expr = new_env.value_for_key(String::from("foo"));
+        //assert 
+        if let crate::Expression::Number(value) = expr {
+            assert_eq!(42, *value);
+        } else {
+            assert!(false);
+        }
+    }
+    #[test]
+    fn test_value_for_key() {
+        //arrange
+        let mut new_env = crate::Environment::new();
+        new_env.add_value_for_key(String::from("foo"), &crate::Expression::Number(42));
+        //act
+        let expr = new_env.value_for_key(String::from("foo"));
+        //assert
+        if let crate::Expression::Number(value) = expr {
+            assert_eq!(42, *value);
+        } else {
+            assert!(false);
+        }
+    }
+    #[test]
+    fn test_addition_with_variable() {
+        //arrange
+        let mut new_env = crate::Environment::new();
+        new_env.add_value_for_key(String::from("foo"), &crate::Expression::Number(42));
+        let v = vec![Expression::Variable(String::from("foo")), Expression::Number(2)];
+        let add = Expression::Add(v);
+        //act
+        let sum = crate::evaluate(&add, &new_env);
+        //assert
+        assert_eq!(44, sum);
+    }
+    #[test]
+    fn test_printing_expression() {
+        use crate::print_add;
+        use crate::evaluate_evaluate;
+        use crate::Expression;
+        // arrange
+        let mut env = crate::Environment::new();
+        let v = vec![Expression::Number(2), Expression::Number(2)];
+        let a = Expression::Add(v);
+        let z = Expression::Multiply(vec![a, Expression::Number(2)]);
+        // act
+        let eq = evaluate_evaluate( &z, &env);
+        // assert
+        assert_eq!(eq, println!("(+ {:?})", eq));
+    }
     #[test]
     fn hashy_mappy(){
         //arrange
