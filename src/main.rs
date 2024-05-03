@@ -17,12 +17,22 @@ pub enum Expression {
     Number(i32),
 }
 
+#[derive(Clone)]
+#[derive(Debug)]
 pub struct Environment {
     map: HashMap<String, Expression>,
     parent: Option<Box<Environment>>,
     // HW
     cost: Option<HashMap<i32, i32>>,
     difference: Option<i32>,
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+pub enum Statement {
+    Assignment(String, Expression),
+    Print(String),
+    PrintV(Expression)
 }
 
 impl Environment {
@@ -32,7 +42,12 @@ impl Environment {
     }
 
     pub fn value_for_key(self: &Environment, key: String) -> &Expression {
-       &self.map.get(&key).unwrap_or(&Expression::Number(0))
+        if let Some(env) = &self.parent {
+            &self.map.get(&key).unwrap_or(env.value_for_key(key))
+        } else {
+            &self.map.get(&key).unwrap_or(&Expression::Number(0))
+        }
+       
     }
 
     pub fn add_value_for_key(&mut self, key: String, value: &Expression) {
@@ -138,46 +153,51 @@ fn print_substract(_environment: &Environment, element: &Expression) {
     }
 }
 
+pub fn resolve_statement(s: &Statement, e:&mut Environment) {
+    match s {
+        Statement::Print(t) => print!("{t}"),
+        Statement::Assignment(t, exp) => e.add_value_for_key(t.to_string(), exp),
+        Statement::PrintV(exp) => print!("{}", evaluate(exp, e)),
+        _ => panic!("did not support this statement")
+    }
+}
+
 fn main() {
-    let mut expression = Vec::<Expression>::new();
-    // expression.push(Expression::Add);
-    expression.push(Expression::Number(3));
-    expression.push(Expression::Number(4));
-    let addition = Expression::Add(expression);
-    let env = crate::Environment::new();
-    println!("{:?}", evaluate_evaluate(&addition, &env));
-    let sum = evaluate(&addition, &Environment::new());
-    println!("{}", sum);
+    //set up environment
+    let mut env = Environment::new();
+    // start with a print
+    let print_statement = Statement::Print("hello world\n".to_string());
+    resolve_statement(&print_statement, &mut env);
 
-    let v = vec![Expression::Number(2), Expression::Number(3)];
-    let a = Expression::Add(v);
-    let z = Expression::Multiply(vec![a, Expression::Number(7)]);
-    // act
-    print!("{:?}", evaluate_evaluate( &z, &env));
+    let assign_statement = Statement::Assignment("x".to_string(), Expression::Number(5));
+    resolve_statement(&assign_statement, &mut env);
 
-    let mut expression2 = Vec::<Expression>::new();
-    expression2.push(Expression::Number(21));
-    expression2.push(Expression::Number(2));
-    expression2.push(addition);
-    let multiplication = Expression::Multiply(expression2);
-    let product = evaluate(&multiplication, &Environment::new());
-    println!("{}", product);
+    // let addition = Expression::Add(vec![
+    //     Expression::Variable("x".to_string()),
+    //     Expression::Number(3)
+    // ]);
+    // let print_statement = Statement::PrintV(addition);
+    // resolve_statement(&print_statement, &mut env);
 
-    let mut expression3 = Vec::<Expression>::new();
-    // expression3.push(Expression::Subtract(()));
-    expression3.push(Expression::Number(20));
-    expression3.push(Expression::Number(2));
-    let substraction = Expression::Subtract(expression3);
-    let difference = evaluate(&substraction, &Environment::new());
-    println!("{}", difference);
+    // HW
+    let square = Expression::Multiply(vec![
+        Expression::Variable("x".to_string()),
+        Expression::Variable("x".to_string()),
+    ]);
 
+    let print_statement = Statement::PrintV(square);
+    resolve_statement(&print_statement, &mut env);
+
+
+    
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::fs::read;
 
-    use crate::{evalute_addition};
+    use crate::{evaluate, evalute_addition};
     use crate::{Expression};
     use crate::{evaluate_multiplication};
     use crate::{evaluate_substraction};
@@ -301,5 +321,93 @@ mod tests {
         let sum = crate::evaluate(&add, &new_env);
         //assert
         assert_eq!(sum, 53);
+    }
+    #[test]
+    fn mult_env(){
+        //arrange
+        let mut e0 = crate::Environment::new();
+        let mut e1 = crate::Environment::new();
+        e0.add_value_for_key(("x".to_string()), &crate::Expression::Number(2));
+        e1.parent = Some(Box::new(e0));
+        //act
+        let v = e1.value_for_key("x".to_string());
+        let value = crate::evaluate(&v, &e1);
+        //assert
+        assert_eq!(value, 2)
+    }
+    #[test]
+    fn test_square_function() {
+        //arrange 
+        let mut e0 = crate::Environment::new();
+        let mut e1 = crate::Environment::new();
+        let square = Expression::Multiply(vec![
+            Expression::Variable("x".to_string()),
+            Expression::Variable("x".to_string()),
+        ]);
+        e1.add_value_for_key("square".to_string(), &square);
+        e0.add_value_for_key("x".to_string(), &crate::Expression::Number(2));
+        e0.parent = Some(Box::new(e1));
+        //act
+        let v = e0.value_for_key("square".to_string());
+        let value = crate::evaluate(&v, &e0);
+        //assert
+        assert_eq!(value, 4)
+    }
+    #[test]
+    fn test_sum_of_squares_function() {
+        //arrange
+        let mut e0 = crate::Environment::new();
+        let mut e1 = crate::Environment::new();
+        let mut e2 = crate::Environment::new();
+        let square = Expression::Multiply(vec![
+            Expression::Variable("x".to_string()),
+            Expression::Variable("x".to_string()),
+        ]);
+        let sum_of_squares =  Expression::Add(
+            vec![
+                Expression::Variable("square".to_string()),
+                Expression::Variable("square".to_string()),
+            ]
+        );
+        e1.add_value_for_key("square".to_string(), &square);
+        e1.add_value_for_key("sum_of_squares".to_string(), &sum_of_squares);
+        e0.add_value_for_key("x".to_string(), &Expression::Number(2));
+        e0.parent = Some(Box::new(e1));
+        //act
+        let v = e0.value_for_key("sum_of_squares".to_string());
+        let value = crate::evaluate(&v, &e0);
+        //assert
+        assert_eq!(value, 8);
+    }
+    #[test]
+    fn test_sum_of_squares_applicative() {
+        //arrange
+        let mut e0 = crate::Environment::new();
+        let mut e1 = crate::Environment::new();
+        e1.add_value_for_key("x".to_string(), &Expression::Number(2));
+        let mut e2 = crate::Environment::new();
+        e2.add_value_for_key("x".to_string(), &Expression::Number(3));
+        let square = Expression::Multiply(vec![
+            Expression::Variable("x".to_string()),
+            Expression::Variable("x".to_string()),
+        ]);
+        e0.add_value_for_key(("square".to_string()), &square);
+        e1.parent = Some(Box::new(e0.clone()));
+        e2.parent = Some(Box::new(e0.clone()));
+        let sum_of_squares =  Expression::Add(
+            vec![
+                Expression::Number(crate::evaluate(e1.value_for_key("square".to_string()), &e1)),
+                Expression::Number(crate::evaluate(e2.value_for_key("square".to_string()), &e2)),
+            ]
+        );
+        e1.add_value_for_key("square".to_string(), &square);
+        e1.add_value_for_key("sum_of_squares".to_string(), &sum_of_squares);
+        e0.add_value_for_key("x".to_string(), &Expression::Number(2));
+        e0.parent = Some(Box::new(e1));
+        //act
+        let v = e0.value_for_key("sum_of_squares".to_string());
+        let value = crate::evaluate(&v, &e0);
+        //assert
+        assert_eq!(value, 13); 
     }
 }
